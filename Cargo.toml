@@ -15,9 +15,9 @@ keywords = ["diesel", "postgres", "hstore"]
 categories = ["database"]
 
 [dependencies]
-diesel = { version = "~1.0.0-beta1", features = ["postgres"] }
-byteorder = "~1.2"
-fallible-iterator = "~0.1"
+diesel = { version = "2", features = ["postgres"] }
+byteorder = "1.2"
+fallible-iterator = "0.2"
 
 [dev-dependencies]
-dotenv = "~0.10"
+dotenv = "0.15"

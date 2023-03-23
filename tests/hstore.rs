@@ -1,6 +1,5 @@
 #![feature(test)]
 
-#[macro_use]
 extern crate diesel;
 extern crate diesel_pg_hstore;
 extern crate dotenv;
@@ -21,8 +20,8 @@ fn connection() -> PgConnection {
 }
 
 table! {
-    use diesel::types::*;
-    use diesel_pg_hstore::Hstore;
+    use diesel::sql_types::*;
+    use diesel_pg_hstore::sql_types::Hstore;
 
     hstore_table {
         id -> Integer,
@@ -37,7 +36,7 @@ struct HasHstore {
     store: Hstore,
 }
 
-fn make_table(db: &PgConnection) {
+fn make_table(db: &mut PgConnection) {
     db.batch_execute(
         r#"
         CREATE EXTENSION IF NOT EXISTS hstore;
@@ -55,8 +54,8 @@ fn make_table(db: &PgConnection) {
 
 #[test]
 fn metadata() {
-    let db = connection();
-    make_table(&db);
+    let db = &mut connection();
+    make_table(db);
 
     let mut m = Hstore::new();
     m.insert("Hello".into(), "There".into());
@@ -66,10 +65,10 @@ fn metadata() {
 
     diesel::insert_into(hstore_table::table)
         .values(&another)
-        .execute(&db)
+        .execute(db)
         .expect("To insert data");
 
-    let data: Vec<HasHstore> = hstore_table::table.get_results(&db).expect("To get data");
+    let data: Vec<HasHstore> = hstore_table::table.get_results(db).expect("To get data");
 
     assert_eq!(data[0].store["a"], "1".to_string());
     assert_eq!(data[0].store["b"], "2".to_string());

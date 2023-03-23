@@ -7,10 +7,10 @@ extern crate dotenv;
 
 use std::env;
 
+use diesel::connection::SimpleConnection;
+use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::Connection;
-use diesel::pg::PgConnection;
-use diesel::connection::SimpleConnection;
 
 use diesel_pg_hstore::Hstore;
 
@@ -38,7 +38,8 @@ struct HasHstore {
 }
 
 fn make_table(db: &PgConnection) {
-    db.batch_execute(r#"
+    db.batch_execute(
+        r#"
         CREATE EXTENSION IF NOT EXISTS hstore;
         DROP TABLE IF EXISTS hstore_table;
         CREATE TABLE hstore_table (
@@ -47,7 +48,9 @@ fn make_table(db: &PgConnection) {
         );
         INSERT INTO hstore_table (id, store)
           VALUES (1, 'a=>1,b=>2'::hstore);
-    "#).unwrap();
+    "#,
+    )
+    .unwrap();
 }
 
 #[test]
@@ -59,19 +62,14 @@ fn metadata() {
     m.insert("Hello".into(), "There".into());
     m.insert("Again".into(), "Stuff".into());
 
-    let another = HasHstore {
-        id: 2,
-        store: m,
-    };
+    let another = HasHstore { id: 2, store: m };
 
     diesel::insert_into(hstore_table::table)
         .values(&another)
         .execute(&db)
         .expect("To insert data");
 
-    let data: Vec<HasHstore> = hstore_table::table
-        .get_results(&db)
-        .expect("To get data");
+    let data: Vec<HasHstore> = hstore_table::table.get_results(&db).expect("To get data");
 
     assert_eq!(data[0].store["a"], "1".to_string());
     assert_eq!(data[0].store["b"], "2".to_string());

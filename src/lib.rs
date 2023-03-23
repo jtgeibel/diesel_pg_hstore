@@ -95,14 +95,14 @@
 //!
 //! Postgres hstore entries having a null value are simply ignored.
 
-extern crate diesel;
 extern crate byteorder;
+extern crate diesel;
 extern crate fallible_iterator;
 
-use std::ops::{Index, Deref, DerefMut};
-use std::collections::HashMap;
 use std::collections::hash_map::*;
+use std::collections::HashMap;
 use std::iter::FromIterator;
+use std::ops::{Deref, DerefMut, Index};
 
 /// The Hstore wrapper type.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -260,7 +260,8 @@ impl Hstore {
 
     /// Please see [HashMap.retain](#method.retain-1)
     pub fn retain<F>(&mut self, f: F)
-        where F: FnMut(&String, &mut String) -> bool
+    where
+        F: FnMut(&String, &mut String) -> bool,
     {
         self.0.retain(f)
     }
@@ -295,7 +296,8 @@ impl<'a> IntoIterator for &'a mut Hstore {
 
 impl FromIterator<(String, String)> for Hstore {
     fn from_iter<T>(iter: T) -> Hstore
-        where T: IntoIterator<Item = (String, String)>
+    where
+        T: IntoIterator<Item = (String, String)>,
     {
         Hstore(HashMap::from_iter(iter))
     }
@@ -312,26 +314,27 @@ impl<'a> Index<&'a str> for Hstore {
 
 impl Extend<(String, String)> for Hstore {
     fn extend<T>(&mut self, iter: T)
-        where T: IntoIterator<Item = (String, String)>
+    where
+        T: IntoIterator<Item = (String, String)>,
     {
         self.0.extend(iter)
     }
 }
 
 mod impls {
-    use std::str;
-    use std::error::Error as StdError;
-    use std::io::Write;
-    use std::collections::HashMap;
-    use fallible_iterator::FallibleIterator;
-    use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian};
-    use diesel::types::impls::option::UnexpectedNullError;
-    use diesel::Queryable;
-    use diesel::expression::AsExpression;
+    use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
     use diesel::expression::bound::Bound;
+    use diesel::expression::AsExpression;
     use diesel::pg::Pg;
     use diesel::row::Row;
+    use diesel::types::impls::option::UnexpectedNullError;
     use diesel::types::*;
+    use diesel::Queryable;
+    use fallible_iterator::FallibleIterator;
+    use std::collections::HashMap;
+    use std::error::Error as StdError;
+    use std::io::Write;
+    use std::str;
 
     use super::Hstore;
 
@@ -363,9 +366,11 @@ mod impls {
         fn from_sql(bytes: Option<&[u8]>) -> Result<Self, Box<StdError + Send + Sync>> {
             let mut buf = match bytes {
                 Some(bytes) => bytes,
-                None => return Err(Box::new(UnexpectedNullError {
-                    msg: "Unexpected null for non-null column".to_string(),
-                })),
+                None => {
+                    return Err(Box::new(UnexpectedNullError {
+                        msg: "Unexpected null for non-null column".to_string(),
+                    }))
+                }
             };
             let count = buf.read_i32::<BigEndian>()?;
 
@@ -395,8 +400,12 @@ mod impls {
     }
 
     impl ToSql<Hstore, Pg> for Hstore {
-        fn to_sql<W>(&self, out: &mut ToSqlOutput<W, Pg>) -> Result<IsNull, Box<StdError + Send + Sync>>
-            where W: Write
+        fn to_sql<W>(
+            &self,
+            out: &mut ToSqlOutput<W, Pg>,
+        ) -> Result<IsNull, Box<StdError + Send + Sync>>
+        where
+            W: Write,
         {
             let mut buf: Vec<u8> = Vec::new();
             buf.extend_from_slice(&[0; 4]);
@@ -410,9 +419,7 @@ mod impls {
             }
 
             let count = count as i32;
-            (&mut buf[0..4])
-                .write_i32::<BigEndian>(count)
-                .unwrap();
+            (&mut buf[0..4]).write_i32::<BigEndian>(count).unwrap();
 
             out.write_all(&buf)?;
             Ok(IsNull::No)
@@ -432,7 +439,9 @@ mod impls {
     }
 
     impl<'a> HstoreIterator<'a> {
-        fn consume(&mut self) -> Result<Option<(&'a str, Option<&'a str>)>, Box<StdError + Sync + Send>> {
+        fn consume(
+            &mut self,
+        ) -> Result<Option<(&'a str, Option<&'a str>)>, Box<StdError + Sync + Send>> {
             if self.remaining == 0 {
                 if !self.buf.is_empty() {
                     return Err("invalid buffer size".into());
@@ -453,8 +462,7 @@ mod impls {
             let value_len = self.buf.read_i32::<BigEndian>()?;
             let value = if value_len < 0 {
                 None
-            }
-            else {
+            } else {
                 let (value, buf) = self.buf.split_at(value_len as usize);
                 let value = str::from_utf8(value)?;
                 self.buf = buf;
